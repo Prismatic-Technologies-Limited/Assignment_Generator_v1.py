@@ -14,44 +14,34 @@ MODEL_NAME = "llama-3.3-70b-versatile"
 app = FastAPI()
 
 class AssignmentRequest(BaseModel):
+    subject: str
     short_questions: int
-    long_questions: int
     topics: List[str]
-    num_assignments: int  # ✅ total marks, not number of papers
 
 @app.post("/generate_assignments")
 async def generate_assignments(request: AssignmentRequest):
     # Define mark weight
     short_q_mark = 2
-    long_q_mark = 5
 
-    total_marks = request.short_questions * short_q_mark + request.long_questions * long_q_mark
+    # ✅ Automatically calculate total marks
+    total_marks = request.short_questions * short_q_mark
 
-    if total_marks != request.num_assignments:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Total marks from questions = {total_marks}, but expected {request.num_assignments}."
-        )
-
-    short_qs = await generate_groq_questions(request.topics, request.short_questions, "short")
-    long_qs = await generate_groq_questions(request.topics, request.long_questions, "long")
+    # Generate short questions
+    short_qs = await generate_groq_questions(request.subject, request.topics, request.short_questions)
 
     return {
+        "subject": request.subject,
         "total_marks": total_marks,
-        "short_question_marks": request.short_questions * short_q_mark,
-        "long_question_marks": request.long_questions * long_q_mark,
-        "short_questions": short_qs,
-        "long_questions": long_qs
+        "short_questions": short_qs
     }
 
-async def generate_groq_questions(topics: List[str], count: int, qtype: str):
+async def generate_groq_questions(subject: str, topics: List[str], count: int):
     prompt = f"""
 You are an assignment question generator.
 
-Generate {count} {qtype} type questions from these topics: {', '.join(topics)}.
+Generate {count} short type questions for the subject "{subject}" from these topics: {', '.join(topics)}.
 
 - Short questions should be definition-based or objective type.
-- Long questions should be analytical, asking for explanations or applications.
 Return only the questions in a list format.
 """
     try:
