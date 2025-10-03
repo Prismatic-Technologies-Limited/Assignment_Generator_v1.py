@@ -1,12 +1,11 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import List
-import openai
 import os
+import openai
+from typing import List
+from pydantic import BaseModel
 from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException
 
 load_dotenv()
-
 openai.api_key = os.getenv("GROQ_API_KEY")
 openai.api_base = "https://api.groq.com/openai/v1"
 MODEL_NAME = "llama-3.3-70b-versatile"
@@ -22,13 +21,10 @@ class AssignmentRequest(BaseModel):
 async def generate_assignments(request: AssignmentRequest):
     # Define mark weight
     short_q_mark = 2
-
     # ✅ Automatically calculate total marks
     total_marks = request.short_questions * short_q_mark
-
     # Generate short questions
     short_qs = await generate_groq_questions(request.subject, request.topics, request.short_questions)
-
     return {
         "subject": request.subject,
         "total_marks": total_marks,
